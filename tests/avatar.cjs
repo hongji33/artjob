@@ -42,7 +42,7 @@ const output=process.env.ARTJOB_TEST_OUTPUT||'/tmp/artjob-avatar-checks';fs.mkdi
   assert.equal(await page.locator('.encounter-avatar').evaluate(c=>JSON.parse(c.dataset.avatarSignature).gender),'male');
   await page.waitForTimeout(1000);await page.screenshot({path:path.join(output,'meet-expert.png')});
   await page.getByRole('button',{name:'의뢰서 받아 보기'}).click();await page.getByRole('button',{name:'의뢰 확인 · 디자인 시작하기'}).click();
-  await page.waitForSelector('#backs button');await page.locator('#finish').click();await page.waitForFunction(()=>document.getElementById('status').textContent.includes('획득'));
+  await page.waitForSelector('#backs button');await page.locator('#finish').click();await page.waitForFunction(()=>document.getElementById('status').textContent.includes('저장'));
   assert.equal(await page.evaluate(()=>ArtStore.works().at(-1).creator.name),'하늘 디자이너');
   await page.getByRole('button',{name:'전문가와 다시 만나기'}).click();assert.equal(await page.locator('.mentor-encounter').isVisible(),true);await page.keyboard.press('Escape');
   await page.goto(base+'/gallery.html');assert.equal(await page.getByText('DESIGNED BY 하늘 디자이너').count(),1);

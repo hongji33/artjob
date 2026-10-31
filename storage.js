@@ -6,8 +6,9 @@ window.ArtStore = {
   works() { const v = this.read('artjob_works', []); return Array.isArray(v) ? v.filter(w => w && typeof w.image === 'string' && w.image.startsWith('data:image/png;') && typeof w.id === 'string') : []; },
   addWork(work) {
     const works = this.works();
-    const item = { ...work, ...(window.ArtAvatar ? {creator:window.ArtAvatar.get()} : {}), ...(window.ArtBrief ? {mission:window.ArtBrief.snapshot()} : {}), id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random(), createdAt: new Date().toISOString() };
+    const item = { ...work, ...(window.ArtAvatar ? {creator:window.ArtAvatar.get()} : {}), ...(window.ArtBrief ? {mission:window.ArtBrief.snapshot()} : {}), ...(!work.project&&window.ArtCourse?{project:window.ArtCourse.snapshot()}:{}), id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random(), createdAt: new Date().toISOString() };
     if (!this.setItem('artjob_works', JSON.stringify([...works, item]))) throw new Error('Storage unavailable or full');
+    if(window.ArtCourse&&!item.project?.submitted)return item;
     const stored = this.read('artjob_badges', []);
     const badges = Array.isArray(stored) ? stored.filter(n=>Number.isInteger(n)&&n>=1&&n<=5) : [];
     this.setItem('artjob_badges', JSON.stringify([...new Set([...badges, work.job])]));

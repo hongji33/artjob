@@ -45,7 +45,7 @@ fs.mkdirSync(output, {recursive:true});
       assert.equal(await page.locator('.brief-dialog').evaluate(d=>d.open),false);
       await page.locator(job===1?'#workName':'#name').fill('의뢰에 답하는 작품 '+job);
       await page.locator('#finish').click();
-      await page.waitForFunction(()=>document.getElementById('status').textContent.includes('획득'));
+      await page.waitForFunction(()=>document.getElementById('status').textContent.includes('저장'));
       const mission=await page.evaluate(()=>ArtStore.works().at(-1).mission);
       assert.equal(mission.id,`brief-v1-${job}`);
       assert.equal(mission.checks[0],true);

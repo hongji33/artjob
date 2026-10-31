@@ -11,6 +11,8 @@
     4: {slug:'curator',company:'MUSEUM OF TOMORROW',department:'전시 기획실',expert:'이준서',role:'전시 기획자',client:'청소년 아트위크 운영팀',title:'색과 리듬이 만나는 작은 전시',greeting:'전시를 만드는 일은 작품 사이에 이야기를 놓는 일이에요. 운영팀의 제안서를 읽고, 여러분만의 전시를 기획해 주세요.',letter:'청소년 관람객을 위한 작은 추상미술 전시를 준비하고 있어요. 세 작품이 하나의 이야기처럼 느껴지도록 색, 배열, 전시실 분위기를 제안해 주세요.',requirements:['컬러 필드·기하학 리듬·유기적 선 중 전시의 시각 언어를 정해 주세요.','작품의 크기와 순서로 관람객의 시선이 움직이는 흐름을 만들어 주세요.','전시실 분위기와 작품 색의 관계를 생각하고 전시 주제를 설명해 주세요.'],deliverable:'전시 구성 이미지 1점 + 전시 제목 + 기획 의도',tip:'가운데 놓인 작품, 작품 사이의 간격, 벽의 색도 이야기를 전달하는 도구가 돼요.'},
     5: {slug:'fashion',company:'THREAD & TOMORROW',department:'패션 크리에이티브 스튜디오',expert:'차유진',role:'패션 크리에이티브 디렉터',client:'청소년 라이프스타일 컬렉션 팀',title:'내일의 일상을 입다',greeting:'옷은 입는 사람의 이야기를 보여 줘요. 새 컬렉션의 디자인 의뢰서를 가져왔어요. 어떤 하루를 위한 옷인지 상상하며 읽어 보세요.',letter:'청소년의 미래 일상을 위한 의상 한 벌을 제안받고 싶어요. 활동하기 편하면서도 입는 사람의 개성이 드러나는 디자인을 기다립니다.',requirements:['누가 어떤 상황에서 입을 옷인지 정하고 실루엣을 선택해 주세요.','솔리드·스트라이프·도트와 색을 조합해 컬렉션의 개성을 만들어 주세요.','액세서리의 기능과 전체 비례를 살펴보고 디자인 의도를 적어 주세요.'],deliverable:'패션 디자인 이미지 1점 + 의상 이름 + 착용 상황과 디자인 설명',tip:'멋진 옷에는 이유가 있어요. 실루엣과 패턴이 입는 사람의 움직임에 어떤 느낌을 줄까요?'}
   };
+  const course=window.ArtCurriculum?.[job];
+  if(course)Object.assign(briefs[job]||{}, {client:course.client,title:course.title,letter:course.letter,requirements:course.summary,deliverable:course.deliverable,tip:course.question});
   const brief = briefs[job];
   const avatar=window.ArtAvatar;
   const profile=avatar?.get();
@@ -53,13 +55,13 @@
       <div class="expert-intro"><div class="expert-company">${escape(brief.company)}</div><h2>${escape(brief.expert)} <small>${escape(brief.role)}</small></h2><p>“${escape(brief.greeting)}”</p><span>당신의 디자인 파트너</span></div>
       <article class="project-paper" aria-label="${escape(brief.title)} 의뢰서">
         <div class="paper-heading"><span>PROJECT BRIEF <b>0${job}</b></span><span>DESIGN REQUEST / 01</span></div>
-        <div class="paper-stamp">의뢰서</div>
+        <div class="paper-stamp">PROJECT 0${job}</div>
         <p class="paper-category">${escape(brief.department)}</p><h2>${escape(brief.title)}</h2>
         <dl class="paper-meta"><div><dt>의뢰인</dt><dd>${escape(brief.client)}</dd></div><div><dt>담당 전문가</dt><dd>${escape(brief.expert)} · ${escape(brief.role)}</dd></div><div><dt>디자이너</dt><dd>${escape(designerName)}, ART JOB CITY의 신입 디자이너</dd></div></dl>
         <p class="paper-letter">${escape(brief.letter)}</p>
         <h3>디자인할 때 생각해 주세요</h3><ol class="paper-requirements">${brief.requirements.map((r,i)=>`<li><span>0${i+1}</span><p>${escape(r)}</p></li>`).join('')}</ol>
         <div class="paper-deliverable"><span>제출할 작품</span><p>${escape(brief.deliverable)}</p></div>
-        <p class="paper-tip">DESIGNER'S NOTE<br><span>${escape(brief.tip)}</span></p>
+        <p class="paper-tip">핵심 질문 · ${escape(brief.tip)}</p>
         <button type="button" class="brief-accept">의뢰 확인 · 디자인 시작하기 <span>→</span></button>
         <p class="paper-footnote">선택은 자유롭게, 설명은 나답게. 의뢰서는 작업 중에도 다시 볼 수 있어요.</p>
       </article>

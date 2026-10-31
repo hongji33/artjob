@@ -27,6 +27,12 @@
   function atlas(gender){if(!atlases[gender])atlases[gender]=new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>{delete atlases[gender];reject(new Error('캐릭터 이미지를 불러오지 못했습니다. 다시 시도해 주세요.'))};image.src=new URL(`assets/avatar-${gender}.webp`,base).href});return atlases[gender]}
   const rgb = hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
   function tint(data,index,color,brightness,reference){const shade=Math.max(.22,Math.min(1.65,brightness/reference));for(let k=0;k<3;k++)data[index+k]=Math.min(255,color[k]*shade)}
+  // Calibrated on the 418px atlas cells. Coordinates follow the original artwork,
+  // not skin/hair colour; every outfit has its own face location and head tilt.
+  const faceLandmarks={
+    female:[[[263,51,286,43,278,8],[191,51,213,43,204,8],[117,51,141,43,131,8]],[[263,51,286,43,278,8],[191,51,213,43,204,8],[117,51,141,43,131,8]],[[263,55,286,47,278,12],[191,55,213,47,204,12],[117,55,141,47,131,12]]],
+    male:[[[208,54,230,48,224,10],[186,54,207,48,202,10],[163,54,184,48,178,10]],[[209,55,231,49,225,12],[186,55,207,49,202,12],[163,55,185,49,179,12]],[[208,60,230,54,224,12],[185,60,207,54,201,12],[162,60,184,54,178,12]]]
+  };
   async function draw(canvas,profile=get()) {
     const p=validate(profile);const token={};canvas.avatarToken=token;
     const image=await atlas(p.gender);if(canvas.avatarToken!==token)return;
@@ -37,10 +43,10 @@
     const cut=document.createElement('canvas');cut.width=cellWidth;cut.height=cellHeight;const cutCtx=cut.getContext('2d',{willReadFrequently:true});cutCtx.drawImage(image,p.outfit*cellWidth,p.hair*cellHeight,cellWidth,cellHeight,0,0,cellWidth,cellHeight);
     const raw=cutCtx.getImageData(0,0,cellWidth,cellHeight).data;let minX=cellWidth,minY=cellHeight,maxX=0,maxY=0;
     for(let y=0;y<cellHeight;y++)for(let x=0;x<cellWidth;x++)if(raw[(y*cellWidth+x)*4+3]>128){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
-    if(maxX>minX&&maxY>minY){const scale=Math.min(w*.84/(maxX-minX+1),h*.94/(maxY-minY+1));const dw=(maxX-minX+1)*scale,dh=(maxY-minY+1)*scale;ctx.drawImage(cut,minX,minY,maxX-minX+1,maxY-minY+1,(w-dw)/2,(h-dh)/2,dw,dh)}
+    let artworkTransform;
+    if(maxX>minX&&maxY>minY){const scale=Math.min(w*.84/(maxX-minX+1),h*.94/(maxY-minY+1));const dw=(maxX-minX+1)*scale,dh=(maxY-minY+1)*scale;artworkTransform={scale,dx:(w-dw)/2,dy:(h-dh)/2};ctx.drawImage(cut,minX,minY,maxX-minX+1,maxY-minY+1,artworkTransform.dx,artworkTransform.dy,dw,dh)}
     const pixels=ctx.getImageData(0,0,w,h),d=pixels.data;
     const hair=rgb(p.hairColor),top=rgb(p.topColor),bottom=rgb(p.bottomColor),skin=rgb(p.skinColor);
-    let faceX=0,faceY=0,faceCount=0;
     let left=w,right=0,upper=h,lower=0;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(d[i+3]<35)continue;left=Math.min(left,x);right=Math.max(right,x);upper=Math.min(upper,y);lower=Math.max(lower,y)}
     const height=Math.max(1,lower-upper);
@@ -50,24 +56,37 @@
       if(delta<.045)continue;
       let hue=max===r?((g-b)/delta+6)%6:max===g?(b-r)/delta+2:(r-g)/delta+4;hue/=6;
       const saturation=delta/(max||1),luma=.2126*r+.7152*g+.0722*b,yy=(y-upper)/height;
-      if(hue>.025&&hue<.13&&saturation>.17&&luma>.55&&yy>.055&&yy<.17){faceX+=x;faceY+=y;faceCount++}
       if(hue>.30&&hue<.57&&saturation>.14&&yy>.18&&yy<.75)tint(d,i,top,luma,.38);
       else if(hue>.56&&hue<.76&&saturation>.15&&yy>.43)tint(d,i,bottom,luma,.24);
       else if(hue<.13&&saturation>.17&&luma<.46&&yy<.31)tint(d,i,hair,luma,.23);
       else if(hue>.025&&hue<.13&&saturation>.14&&luma>.48&&yy<.76)tint(d,i,skin,luma,.76);
     }
     ctx.putImageData(pixels,0,0);
-    // Accessory anchors follow each cutout's actual bounds, including hairstyle padding.
-    const cx=faceCount>15?faceX/faceCount:(left+right)/2,eyeY=faceCount>15?faceY/faceCount-height*.012:upper+height*.11,unit=height*.029;
-    ctx.save();ctx.strokeStyle='#3a342f';ctx.lineWidth=Math.max(1.5,height*.005);ctx.lineJoin='round';
+    const landmarks=faceLandmarks[p.gender][p.hair][p.outfit];
+    const map=(x,y)=>({x:(x/418*cellWidth-minX)*artworkTransform.scale+artworkTransform.dx,y:(y/418*cellHeight-minY)*artworkTransform.scale+artworkTransform.dy});
+    const eyes=[map(landmarks[0],landmarks[1]),map(landmarks[2],landmarks[3])];
+    const crown=map(landmarks[4],landmarks[5]);
+    const distance=Math.hypot(eyes[1].x-eyes[0].x,eyes[1].y-eyes[0].y),angle=Math.atan2(eyes[1].y-eyes[0].y,eyes[1].x-eyes[0].x);
+    const rx=distance*.39,ry=distance*.31;
+    ctx.save();ctx.lineWidth=Math.max(1,distance*.075);ctx.strokeStyle='#393b38';ctx.lineCap='round';ctx.lineJoin='round';
     if(p.accessory==='round'||p.accessory==='square'){
-      ctx.fillStyle='#f0f7f11c';
-      for(const side of [-1,1]){ctx.beginPath();if(p.accessory==='round')ctx.ellipse(cx+side*unit*.92,eyeY,unit*.78,unit*.64,0,0,Math.PI*2);else ctx.roundRect(cx+side*unit*.92-unit*.78,eyeY-unit*.56,unit*1.56,unit*1.12,unit*.16);ctx.fill();ctx.stroke()}
-      ctx.beginPath();ctx.moveTo(cx-unit*.15,eyeY);ctx.quadraticCurveTo(cx,eyeY-unit*.16,cx+unit*.15,eyeY);ctx.stroke();
+      // Independent paths prevent one lens being joined to or filled over the other.
+      for(const eye of eyes){ctx.save();ctx.translate(eye.x,eye.y);ctx.rotate(angle);ctx.beginPath();
+        if(p.accessory==='round')ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2);
+        else ctx.roundRect(-rx,-ry,2*rx,2*ry,rx*.23);
+        ctx.fillStyle='rgba(217,239,235,.12)';ctx.fill();ctx.stroke();
+        ctx.beginPath();ctx.strokeStyle='#ffffffb3';ctx.lineWidth=distance*.035;ctx.moveTo(-rx*.55,-ry*.4);ctx.lineTo(-rx*.15,-ry*.72);ctx.stroke();ctx.restore();
+      }
+      const ux=Math.cos(angle),uy=Math.sin(angle);
+      ctx.beginPath();ctx.moveTo(eyes[0].x+rx*ux,eyes[0].y+rx*uy);ctx.quadraticCurveTo((eyes[0].x+eyes[1].x)/2,(eyes[0].y+eyes[1].y)/2-distance*.12,eyes[1].x-rx*ux,eyes[1].y-rx*uy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(eyes[0].x-rx*ux,eyes[0].y-rx*uy);ctx.lineTo(eyes[0].x-distance*.65,eyes[0].y-distance*.08);ctx.moveTo(eyes[1].x+rx*ux,eyes[1].y+rx*uy);ctx.lineTo(eyes[1].x+distance*.62,eyes[1].y-distance*.12);ctx.stroke();
     }else if(p.accessory==='headphones'){
-      ctx.strokeStyle='#f1d5a4';ctx.lineWidth=unit*.3;ctx.beginPath();ctx.ellipse(cx,eyeY-unit*.26,unit*2.05,unit*1.8,0,Math.PI,2*Math.PI);ctx.stroke();
-      for(const side of [-1,1]){ctx.fillStyle='#526a5c';ctx.beginPath();ctx.roundRect(cx+side*unit*1.9-unit*.33,eyeY-unit*.5,unit*.66,unit*1.4,unit*.22);ctx.fill();ctx.strokeStyle='#e5c59c';ctx.lineWidth=unit*.1;ctx.stroke()}
+      const ears=[map(landmarks[0]-13,landmarks[1]+8),map(landmarks[2]+14,landmarks[3]+8)];
+      ctx.lineWidth=distance*.19;ctx.strokeStyle='#273d37';ctx.beginPath();ctx.moveTo(ears[0].x,ears[0].y);ctx.bezierCurveTo(ears[0].x-distance*.24,crown.y-distance*.48,ears[1].x+distance*.18,crown.y-distance*.48,ears[1].x,ears[1].y);ctx.stroke();
+      ctx.lineWidth=distance*.075;ctx.strokeStyle='#d9bd88';ctx.stroke();
+      for(const [i,ear] of ears.entries()){ctx.save();ctx.translate(ear.x,ear.y);ctx.rotate(i===0?-.12:.12);ctx.beginPath();ctx.roundRect(-distance*.20,-distance*.35,distance*.40,distance*.85,distance*.13);const finish=ctx.createLinearGradient(-distance*.2,0,distance*.2,0);finish.addColorStop(0,'#213c35');finish.addColorStop(.55,'#688c78');finish.addColorStop(1,'#2e5145');ctx.fillStyle=finish;ctx.fill();ctx.lineWidth=distance*.055;ctx.strokeStyle='#dac292';ctx.stroke();ctx.restore()}
     }
+    canvas.dataset.accessoryGeometry=JSON.stringify({eyes,crown,angle,lensCount:p.accessory==='round'||p.accessory==='square'?2:0});
     ctx.restore();canvas.setAttribute('aria-label',`${p.name} · ${p.gender==='female'?'여학생':'남학생'} 일러스트 캐릭터`);
     canvas.dataset.avatarSignature=JSON.stringify(p);
     return canvas;
