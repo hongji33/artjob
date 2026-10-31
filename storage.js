@@ -6,7 +6,7 @@ window.ArtStore = {
   works() { const v = this.read('artjob_works', []); return Array.isArray(v) ? v.filter(w => w && typeof w.image === 'string' && w.image.startsWith('data:image/png;') && typeof w.id === 'string') : []; },
   addWork(work) {
     const works = this.works();
-    const item = { ...work, ...(window.ArtBrief ? {mission:window.ArtBrief.snapshot()} : {}), id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random(), createdAt: new Date().toISOString() };
+    const item = { ...work, ...(window.ArtAvatar ? {creator:window.ArtAvatar.get()} : {}), ...(window.ArtBrief ? {mission:window.ArtBrief.snapshot()} : {}), id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random(), createdAt: new Date().toISOString() };
     if (!this.setItem('artjob_works', JSON.stringify([...works, item]))) throw new Error('Storage unavailable or full');
     const stored = this.read('artjob_badges', []);
     const badges = Array.isArray(stored) ? stored.filter(n=>Number.isInteger(n)&&n>=1&&n<=5) : [];

@@ -26,6 +26,8 @@ fs.mkdirSync(output, {recursive:true});
       const dimensions = await page.evaluate(async src=>{const img=new Image();img.src=src;await img.decode();return [img.naturalWidth,img.naturalHeight]}, imageURL);
       assert.ok(dimensions[0]>=1200);
       await page.getByRole('button',{name:'의뢰 메일 열기'}).click();
+      assert.equal(await page.locator('.mentor-encounter').isVisible(),true);
+      await page.getByRole('button',{name:'의뢰서 받아 보기'}).click();
       assert.equal(await page.locator('.paper-requirements li').count(),3);
       assert.ok(await page.locator('.expert-intro h2').innerText());
       await page.waitForTimeout(1000);

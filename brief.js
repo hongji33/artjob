@@ -12,6 +12,9 @@
     5: {slug:'fashion',company:'THREAD & TOMORROW',department:'패션 크리에이티브 스튜디오',expert:'차유진',role:'패션 크리에이티브 디렉터',client:'청소년 라이프스타일 컬렉션 팀',title:'내일의 일상을 입다',greeting:'옷은 입는 사람의 이야기를 보여 줘요. 새 컬렉션의 디자인 의뢰서를 가져왔어요. 어떤 하루를 위한 옷인지 상상하며 읽어 보세요.',letter:'청소년의 미래 일상을 위한 의상 한 벌을 제안받고 싶어요. 활동하기 편하면서도 입는 사람의 개성이 드러나는 디자인을 기다립니다.',requirements:['누가 어떤 상황에서 입을 옷인지 정하고 실루엣을 선택해 주세요.','솔리드·스트라이프·도트와 색을 조합해 컬렉션의 개성을 만들어 주세요.','액세서리의 기능과 전체 비례를 살펴보고 디자인 의도를 적어 주세요.'],deliverable:'패션 디자인 이미지 1점 + 의상 이름 + 착용 상황과 디자인 설명',tip:'멋진 옷에는 이유가 있어요. 실루엣과 패턴이 입는 사람의 움직임에 어떤 느낌을 줄까요?'}
   };
   const brief = briefs[job];
+  const avatar=window.ArtAvatar;
+  const profile=avatar?.get();
+  const designerName=profile?.name||'새싹 디자이너';
   if (!brief) return;
   const readKey = `artjob_brief_v1_${job}`;
   const checkKey = `artjob_brief_checks_v1_${job}`;
@@ -41,13 +44,18 @@
       <button type="button" class="mail-open">의뢰 메일 열기 <span>↗</span></button>
       <p class="mail-caption">읽고, 상상하고, 나만의 디자인으로 답해 보세요.</p>
     </section>
+    <section class="mentor-encounter" hidden aria-label="내 캐릭터와 전문가의 첫 만남">
+      <div class="encounter-heading"><span>YOUR FIRST ENCOUNTER / 0${job}</span><h2>${escape(brief.expert)} 전문가를 만나다.</h2><p>${escape(brief.company)} · ${escape(brief.department)}</p></div>
+      <div class="encounter-student"><div class="student-greeting">안녕하세요!<br><strong>${escape(designerName)}</strong> 디자이너입니다.</div><canvas class="encounter-avatar" role="img"></canvas><div class="student-floor"></div><div class="student-nameplate"><span>NEW DESIGNER</span><strong>${escape(designerName)}</strong></div></div>
+      <div class="encounter-conversation"><span class="encounter-speaker">${escape(brief.expert)} <small>${escape(brief.role)}</small></span><p>“${escape(designerName)} 디자이너, 만나서 반가워요.<br>${escape(brief.greeting)}”</p><div class="encounter-conversation-bottom"><span>함께 만드는 첫 번째 프로젝트</span><button type="button" class="encounter-continue">의뢰서 받아 보기 <b>→</b></button></div></div>
+    </section>
     <section class="brief-meeting" hidden>
       <div class="expert-intro"><div class="expert-company">${escape(brief.company)}</div><h2>${escape(brief.expert)} <small>${escape(brief.role)}</small></h2><p>“${escape(brief.greeting)}”</p><span>당신의 디자인 파트너</span></div>
       <article class="project-paper" aria-label="${escape(brief.title)} 의뢰서">
         <div class="paper-heading"><span>PROJECT BRIEF <b>0${job}</b></span><span>DESIGN REQUEST / 01</span></div>
         <div class="paper-stamp">의뢰서</div>
         <p class="paper-category">${escape(brief.department)}</p><h2>${escape(brief.title)}</h2>
-        <dl class="paper-meta"><div><dt>의뢰인</dt><dd>${escape(brief.client)}</dd></div><div><dt>담당 전문가</dt><dd>${escape(brief.expert)} · ${escape(brief.role)}</dd></div><div><dt>디자이너</dt><dd>바로 당신, ART JOB CITY의 신입 디자이너</dd></div></dl>
+        <dl class="paper-meta"><div><dt>의뢰인</dt><dd>${escape(brief.client)}</dd></div><div><dt>담당 전문가</dt><dd>${escape(brief.expert)} · ${escape(brief.role)}</dd></div><div><dt>디자이너</dt><dd>${escape(designerName)}, ART JOB CITY의 신입 디자이너</dd></div></dl>
         <p class="paper-letter">${escape(brief.letter)}</p>
         <h3>디자인할 때 생각해 주세요</h3><ol class="paper-requirements">${brief.requirements.map((r,i)=>`<li><span>0${i+1}</span><p>${escape(r)}</p></li>`).join('')}</ol>
         <div class="paper-deliverable"><span>제출할 작품</span><p>${escape(brief.deliverable)}</p></div>
@@ -58,12 +66,14 @@
     </section>`;
   document.body.append(dialog);
   const meeting = dialog.querySelector('.brief-meeting');
+  const encounter = dialog.querySelector('.mentor-encounter');
   const arrival = dialog.querySelector('.mail-arrival');
   const close = dialog.querySelector('.brief-close');
   const firstButton = dialog.querySelector('.mail-open');
   let accepted = store.getItem(readKey) === 'accepted';
   function documentView() {
-    arrival.hidden = true; meeting.hidden = false;
+    arrival.hidden = true; encounter.hidden=true; meeting.hidden = false;
+    dialog.classList.remove('is-encounter');
     dialog.classList.add('is-reading');
     const title = dialog.querySelector('.project-paper h2');
     title.id = 'brief-paper-title'; title.tabIndex = -1;
@@ -90,7 +100,19 @@
     const reopen = document.querySelector('.brief-reopen');
     if (reopen) reopen.focus({preventScroll:true});
   }
-  firstButton.addEventListener('click', documentView);
+  function encounterView(){
+    encounter.querySelector('.encounter-student').classList.remove('arrived');
+    arrival.hidden=true;meeting.hidden=true;encounter.hidden=false;
+    dialog.classList.remove('is-reading');dialog.classList.add('is-encounter');
+    close.hidden=!accepted;dialog.scrollTop=0;
+    const current=avatar?.get();
+    if(current){const name=encounter.querySelector('.student-nameplate strong');name.textContent=current.name;encounter.querySelector('.student-greeting strong').textContent=current.name;avatar.draw(encounter.querySelector('canvas'),current).catch(()=>{encounter.querySelector('.student-greeting').textContent='캐릭터를 불러오지 못했습니다. 다시 꾸며 주세요.'});}
+    const heading=encounter.querySelector('h2');heading.id='encounter-title';heading.tabIndex=-1;dialog.setAttribute('aria-labelledby','encounter-title');heading.focus({preventScroll:true});
+    window.setTimeout(()=>{encounter.querySelector('.encounter-student').classList.add('arrived')},900);
+  }
+  function meetAgain(){if(!dialog.open){dialog.showModal();document.body.classList.add('brief-is-open')}encounterView()}
+  firstButton.addEventListener('click', encounterView);
+  dialog.querySelector('.encounter-continue').addEventListener('click',documentView);
   dialog.querySelector('.brief-accept').addEventListener('click', finish);
   close.addEventListener('click', finish);
   dialog.addEventListener('cancel', event => {
@@ -105,9 +127,10 @@
   nav?.prepend(reopen);
   const panel = document.createElement('section');
   panel.className='brief-checklist'; panel.setAttribute('aria-labelledby','brief-checklist-title');
-  panel.innerHTML=`<div class="eyebrow">YOUR CLIENT'S BRIEF</div><h2 id="brief-checklist-title">${escape(brief.title)}</h2><p class="brief-client">${escape(brief.client)}의 의뢰</p><div class="brief-check-items">${brief.requirements.map((r,i)=>`<label><input type="checkbox" ${checks[i]?'checked':''} data-brief-check="${i}"><span>${escape(r)}</span></label>`).join('')}</div><p class="brief-selfcheck">내가 반영한 조건을 직접 체크해 보세요.</p>`;
+  panel.innerHTML=`<div class="eyebrow">YOUR CLIENT'S BRIEF</div><h2 id="brief-checklist-title">${escape(brief.title)}</h2><p class="brief-client">${escape(brief.client)}의 의뢰</p><div class="brief-check-items">${brief.requirements.map((r,i)=>`<label><input type="checkbox" ${checks[i]?'checked':''} data-brief-check="${i}"><span>${escape(r)}</span></label>`).join('')}</div><p class="brief-selfcheck">내가 반영한 조건을 직접 체크해 보세요.</p><button type="button" class="meet-again">전문가와 다시 만나기 ↗</button>`;
   const info=document.querySelector('.info');
   if(info)info.prepend(panel);
+  panel.querySelector('.meet-again').addEventListener('click',meetAgain);
   panel.addEventListener('change',event=>{
     const index=event.target.dataset.briefCheck;
     if(index===undefined)return;
@@ -116,6 +139,6 @@
   });
   const stage=document.querySelector('.main')||document.querySelector('.stage-wrap');
   stage?.classList.add('has-office-scene');
-  window.ArtBrief={open:()=>open(true),snapshot:()=>({id:`brief-v1-${job}`,title:brief.title,client:brief.client,expert:brief.expert,checks:[...checks]})};
+  window.ArtBrief={meet:meetAgain,open:()=>open(true),snapshot:()=>({id:`brief-v1-${job}`,title:brief.title,client:brief.client,expert:brief.expert,checks:[...checks]})};
   if(!accepted)open();
 })();
